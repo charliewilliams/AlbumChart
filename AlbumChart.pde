@@ -36,6 +36,8 @@ int[] modes = {1, -1, 0, 1, -1, 1, 1, -1, -1, 1}; // -1 minor, 1 major, 0 mixed
 
 ArrayList<Song>songs = new ArrayList<Song>();
 PFont font;
+float maxFontSize = 24;
+float minFontSize = 8;
 
 boolean drawText = true;
 boolean collapsePitchClasses = true;
@@ -54,9 +56,6 @@ void setup() {
   pg = createGraphics(width, height);
   pdf = (PGraphicsPDF)createGraphics(width * 2, height * 2, PDF, "render-art.pdf");
 
-  //pg.smooth(4);
-  //pdf.smooth(4);
-
   font = createFont("EBGaramond-SemiBold.ttf", 12);
 
   for (int i = 0; i < trackCount; i++) {
@@ -67,7 +66,7 @@ void setup() {
 void drawTo(PGraphics p) {
 
   PVector chartOrigin = new PVector(width * 0.2, height * 0.2);
-  PVector chart = new PVector(width * 0.6, height * 0.6);
+  PVector chart = new PVector(width * (collapsePitchClasses ? 0.6 : 0.7), height * (collapsePitchClasses ? 0.6 : 0.28));
 
   p.colorMode(HSB, 360, 100, 100, 100);
   p.ellipseMode(CENTER);
@@ -89,12 +88,12 @@ void drawTo(PGraphics p) {
 
   p.textAlign(RIGHT);
   p.textSize(16);
-  p.text("larkhall.org", width * 0.95, height * 0.95);
+  p.text("larkhall.org", chart.x + chartOrigin.x, height * (collapsePitchClasses ? 0.95 : 0.55));
   p.textSize(12);
 
-  float rowHeight = chart.y / trackCount;
   int cols = collapsePitchClasses ? 12 : 88;
   float colWidth = chart.x / cols;
+  float rowHeight = collapsePitchClasses ? chart.y / trackCount : colWidth * 3.5;
 
   p.translate(chartOrigin.x, chartOrigin.y);
 
@@ -132,7 +131,7 @@ void drawTo(PGraphics p) {
 
     // track title
     if (drawText) {
-
+      p.textSize(12);
       p.fill(255);
       p.textAlign(RIGHT);
       p.text(s.title, -10, rowHeight / 2);
@@ -183,10 +182,12 @@ void drawTo(PGraphics p) {
       albumRawNoteOccurrences[i] = albumRawNoteOccurrences[i] + 1;
     }
 
-    p.textAlign(CENTER);
-    p.text(songNoteCount, 13 * colWidth, rowHeight / 2);
-    p.text(songDifferentNotesCount, 14 * colWidth, rowHeight / 2);
-    p.text(songDifferentPitchClassesCount, 15 * colWidth, rowHeight / 2);
+    if (collapsePitchClasses) {
+      p.textAlign(CENTER);
+      p.text(songNoteCount, 13 * colWidth, rowHeight / 2);
+      p.text(songDifferentNotesCount, 14 * colWidth, rowHeight / 2);
+      p.text(songDifferentPitchClassesCount, 15 * colWidth, rowHeight / 2);
+    }
 
     //println(s.title + " " + songNoteCount);
     //println(pitchOccurrences);
@@ -225,8 +226,11 @@ void drawTo(PGraphics p) {
 
       if (collapsePitchClasses) {
         p.fill(bri > 50 ? 0 : 255);
-        p.textAlign(CENTER);
-        p.text(count, x + colWidth / 2, rowHeight / 2);
+        p.textAlign(CENTER, BASELINE);
+
+        float fontSize = map(count, 0, max, minFontSize, maxFontSize);
+        p.textSize(fontSize);
+        p.text(count, x + colWidth / 2, rowHeight / 2 + 5);
       }
     }
 
@@ -236,27 +240,35 @@ void drawTo(PGraphics p) {
 
   // Summary row
   p.translate(0, rowHeight / 2);
-  p.text("15960", 13 * colWidth, rowHeight / 2);
-  p.text(albumNotesUsedCount, 14 * colWidth, rowHeight / 2);
-  p.text("12", 15 * colWidth, rowHeight / 2);
 
   if (collapsePitchClasses) {
-    for (int col = 0; col < 12; col++) {
+    p.text("15960", 13 * colWidth, rowHeight / 2);
+    p.text(albumNotesUsedCount, 14 * colWidth, rowHeight / 2);
+    p.text("12", 15 * colWidth, rowHeight / 2);
+  }
 
-      int count = albumPitchClassOccurrences[col];
+  for (int col = 0; col < cols; col++) {
 
-      float x = col * colWidth;
+    int count = collapsePitchClasses ? albumPitchClassOccurrences[col] : albumRawNoteOccurrences[col];
 
-      float hue = map(count, 0, albumMax, 360, 1);
-      float bri = map(count, 0, albumMax, 0, 50);
+    if (count == 0) continue; 
 
-      color c = color(hue, 50, bri, 100);
-      p.fill(c);
-      p.rect(x, 0, colWidth, rowHeight);
+    float x = col * colWidth;
 
+    float hue = map(count, 0, albumMax, 360, 1);
+    float bri = map(count, 0, albumMax, 0, 50);
+
+    color c = color(hue, 50, bri, 100);
+    p.fill(c);
+    p.rect(x, 0, colWidth, rowHeight);
+
+    if (collapsePitchClasses) {
       p.fill(bri > 50 ? 0 : 255);
-      p.textAlign(CENTER);
-      p.text(count, x + colWidth / 2, rowHeight / 2);
+      p.textAlign(CENTER, BASELINE);
+
+      float fontSize = map(count, 0, albumMax * 3, minFontSize, maxFontSize);
+      p.textSize(fontSize);
+      p.text(count, x + colWidth / 2, rowHeight / 2 + 5);
     }
   }
 
